@@ -1,0 +1,121 @@
+from nltk.translate.bleu_score import corpus_bleu
+import pandas as pd
+import re
+from tqdm import tqdm
+from build_model import Model
+import argparse
+
+def postprocess(text, prompt):
+    
+    text = text.replace("<bos>","").replace("<eos>", "")
+
+    text = text[len(prompt):].split("\n")[0]
+    if len(text) > 1:
+        text = text.split(".")[0]
+    else :
+        text = text
+    return text.strip()
+
+def instruction(origin_sentence, source_lang="English", target_lang="Vietnamese"):
+    prompt = f"Translate this from {source_lang} to {target_lang}:\n{source_lang}: {origin_sentence}\n{target_lang}:"
+    return prompt
+
+def eval(text, model,tokenizer,
+        source_lang : str = "English", target_lang : str = "Vietnamese",
+        max_new_tokens : int = 512,
+        min_new_tokens : int = -1, temperature : float = 0.1, 
+        top_k : int = 50, top_p : float = 0.95, repetition_penalty : float = 1):
+    
+    prompt = instruction(str(text), source_lang, target_lang)
+    max_new_tokens = len(str(text)) 
+    input_ids = tokenizer(prompt, return_tensors="pt").to("cuda")
+    target=model.generate(**input_ids.to(model.device),
+                        do_sample=True,
+                        temperature=temperature,
+                        top_p=top_p,
+                        top_k=top_k,
+                        repetition_penalty=repetition_penalty,
+                        max_new_tokens=max_new_tokens,
+                        min_new_tokens=min_new_tokens,
+                        use_cache=True,
+                        early_stopping=True,
+                        penalty_alpha= 1,
+                        num_beams = 5,
+                        )
+    
+    text = tokenizer.decode(target[0])
+    text = postprocess(text = text, prompt = prompt)
+    
+    return text
+
+def handle_io(eval_func):
+    def decorator(func):
+        def wrapper(path_file, output_path, model, tokenizer, **kwargs):
+            if path_file.endswith(".txt"):
+                with open(path_file, "r", encoding='utf-8') as f:
+                    text = f.readlines()
+                content = [x.strip() for x in text]
+                df = pd.DataFrame(content, columns=["origin_text"])
+            elif path_file.endswith(".csv"):
+                df = pd.read_csv(path_file)
+                col = df.columns
+                if col[0] != "origin_text":
+                    df = df.rename(columns={col[0]: "origin_text"})
+            else:
+                raise ValueError("Unsupported file format. Please use .txt or .csv files.")
+            
+            df = func(df, eval_func, model, tokenizer, **kwargs)
+
+            df.to_csv(output_path, index=False)
+            return "Done!"
+        return wrapper
+    return decorator
+
+@handle_io(eval_func=eval)
+def eval_file(df, eval_func, model, tokenizer, **kwargs):
+    for i in tqdm(range(len(df))):
+        text = df['origin_text'].tolist()[i]
+        res = eval_func(text, model, tokenizer, **kwargs)
+        df.loc[i, "translated_text"] = res
+    return df
+
+            
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Inference')
+    parser.add_argument('--config', type=str, default='config/infer.yaml', help='Path to config file')
+    args = parser.parse_args()
+    
+    docs_translate = Model(args.config_path)
+    model = docs_translate.model
+    tokenizer = docs_translate.tokenizer
+    
+    
+    if docs_translate.text is not None:
+        text = docs_translate
+        text = eval(text, model, tokenizer, source_lang= docs_translate.source_lang, target_lang= docs_translate.target_lang, max_new_tokens = docs_translate.max_new_tokens,
+                    min_new_tokens = docs_translate.min_new_tokens, 
+                    temperature  = docs_translate.temperature, 
+                    top_k = docs_translate.top_k, top_p = docs_translate.top_p , 
+                    repetition_penalty = docs_translate.repetition_penalty)
+    
+    if docs_translate.file_path is not None : 
+        kwargs = {
+            "source_lang" : "en",
+            "target_lang" : "vi",
+            "max_new_tokens" : 512,
+            "num_beams" : 5,
+            "early_stopping" : True,
+            "no_repeat_ngram_size" : 1,
+            "repetition_penalty" : 1,
+            "min_new_tokens" : -1,
+            "length_penalty" : 2.0,
+            "device" : "cuda",
+            "top_k" : 50,
+            "top_p" : 0.95,
+            "temperature" : 0.1,
+            "use_cache" : True,
+            "do_sample" : True,
+        }
+        eval_file(docs_translate.file_path, docs_translate.output_path , model, tokenizer, **kwargs)
+        
