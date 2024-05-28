@@ -1,10 +1,9 @@
-from nltk.translate.bleu_score import corpus_bleu
 import pandas as pd
 import re
 from tqdm import tqdm
 from build_model import Model
 import argparse
-
+from loguru import logger
 def postprocess(text, prompt):
     
     text = text.replace("<bos>","").replace("<eos>", "")
@@ -69,7 +68,7 @@ def handle_io(eval_func):
             df = func(df, eval_func, model, tokenizer, **kwargs)
 
             df.to_csv(output_path, index=False)
-            return "Done!"
+            return logger.info(f"Translated file is saved at {output_path}")
         return wrapper
     return decorator
 
@@ -93,14 +92,16 @@ if __name__ == "__main__":
     tokenizer = docs_translate.tokenizer
     
     if docs_translate.text is not None:
+        logger.info("Translating text...")
         text = docs_translate.text
         text = eval(text, model, tokenizer, source_lang= docs_translate.source_lang, target_lang= docs_translate.target_lang, max_new_tokens = docs_translate.max_new_tokens,
                     min_new_tokens = docs_translate.min_new_tokens, 
                     temperature  = docs_translate.temperature, 
                     top_k = docs_translate.top_k, top_p = docs_translate.top_p , 
                     repetition_penalty = docs_translate.repetition_penalty)
-        print("translate :" , text)
+        logger.info(f"Translated text: {text}")
     if docs_translate.file_path is not None : 
+        logger.info("Translating file...")
         kwargs = {
             "source_lang" : docs_translate.source_lang,
             "target_lang" : docs_translate.target_lang,

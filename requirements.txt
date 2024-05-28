@@ -10,3 +10,4 @@ evaluate
 sacrebleu
 transformers
 omegaconf
+loguru
