@@ -9,7 +9,6 @@ class InferConfig:
             self.adapter = self._infer_cfg.adapter
             self.cache_dir = self._infer_cfg.cache_dir
             self.hf_tokens = self._infer_cfg.hf_tokens
-            self.device = self._infer_cfg.device
             self.top_k = self._infer_cfg.top_k
             self.top_p = self._infer_cfg.top_p
             self.temperature = self._infer_cfg.temperature
@@ -19,9 +18,7 @@ class InferConfig:
             self.length_penalty = self._infer_cfg.length_penalty
             self.num_beams = self._infer_cfg.num_beams
             self.early_stopping = self._infer_cfg.early_stopping
-            self.use_cache = self._infer_cfg.use_cache
-            self.do_sample = self._infer_cfg.do_sample
-            self.output_path = self._infer_cfg.output_path
+            self.output_path = self._infer_cfg.output_dir
             
         self.translate = self._cfg.translate
         if self.translate is not None:

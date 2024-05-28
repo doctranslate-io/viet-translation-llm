@@ -21,13 +21,14 @@ def instruction(origin_sentence, source_lang="English", target_lang="Vietnamese"
     return prompt
 
 def eval(text, model,tokenizer,
+         num_beams : int = 5, early_stopping : bool = True,
         source_lang : str = "English", target_lang : str = "Vietnamese",
-        max_new_tokens : int = 512,
-        min_new_tokens : int = -1, temperature : float = 0.1, 
+        max_new_tokens : int = 512, min_new_tokens : int = -1, 
+        temperature : float = 0.1, no_repeat_ngram_size : int = 3,
         top_k : int = 50, top_p : float = 0.95, repetition_penalty : float = 1):
     
     prompt = instruction(str(text), source_lang, target_lang)
-    max_new_tokens = len(str(text)) 
+    max_new_tokens = len(str(text))
     input_ids = tokenizer(prompt, return_tensors="pt").to("cuda")
     target=model.generate(**input_ids.to(model.device),
                         do_sample=True,
@@ -38,9 +39,10 @@ def eval(text, model,tokenizer,
                         max_new_tokens=max_new_tokens,
                         min_new_tokens=min_new_tokens,
                         use_cache=True,
-                        early_stopping=True,
+                        early_stopping=early_stopping,
                         penalty_alpha= 1,
-                        num_beams = 5,
+                        num_beams = num_beams,
+                        no_repeat_ngram_size = no_repeat_ngram_size
                         )
     
     text = tokenizer.decode(target[0])
@@ -86,36 +88,30 @@ if __name__ == "__main__":
     parser.add_argument('--config', type=str, default='config/infer.yaml', help='Path to config file')
     args = parser.parse_args()
     
-    docs_translate = Model(args.config_path)
+    docs_translate = Model(args.config)
     model = docs_translate.model
     tokenizer = docs_translate.tokenizer
     
-    
     if docs_translate.text is not None:
-        text = docs_translate
+        text = docs_translate.text
         text = eval(text, model, tokenizer, source_lang= docs_translate.source_lang, target_lang= docs_translate.target_lang, max_new_tokens = docs_translate.max_new_tokens,
                     min_new_tokens = docs_translate.min_new_tokens, 
                     temperature  = docs_translate.temperature, 
                     top_k = docs_translate.top_k, top_p = docs_translate.top_p , 
                     repetition_penalty = docs_translate.repetition_penalty)
-    
+        print("translate :" , text)
     if docs_translate.file_path is not None : 
         kwargs = {
-            "source_lang" : "en",
-            "target_lang" : "vi",
-            "max_new_tokens" : 512,
-            "num_beams" : 5,
-            "early_stopping" : True,
-            "no_repeat_ngram_size" : 1,
-            "repetition_penalty" : 1,
-            "min_new_tokens" : -1,
-            "length_penalty" : 2.0,
-            "device" : "cuda",
-            "top_k" : 50,
-            "top_p" : 0.95,
-            "temperature" : 0.1,
-            "use_cache" : True,
-            "do_sample" : True,
+            "source_lang" : docs_translate.source_lang,
+            "target_lang" : docs_translate.target_lang,
+            "max_new_tokens" : docs_translate.max_new_tokens,
+            "num_beams" : docs_translate.num_beams,
+            "early_stopping" : docs_translate.early_stopping,
+            "repetition_penalty" : docs_translate.repetition_penalty,
+            "min_new_tokens" : docs_translate.min_new_tokens,
+            "top_k" : docs_translate.top_k,
+            "top_p" : docs_translate.top_p,
+            "temperature" : docs_translate.temperature
         }
         eval_file(docs_translate.file_path, docs_translate.output_path , model, tokenizer, **kwargs)
         

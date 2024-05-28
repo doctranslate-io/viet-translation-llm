@@ -1,7 +1,9 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from huggingface_hub import login
-
+import sys
+import os 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import os 
 from config.base_config import InferConfig

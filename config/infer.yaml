@@ -7,21 +7,18 @@ infer:
   max_new_tokens : 512
   num_beams : 5
   early_stopping : True
-  no_repeat_ngram_size : 1
+  no_repeat_ngram_size : 3
   repetition_penalty : 1
   min_new_tokens : -1
   length_penalty : 2.0
-  device : "cuda"
   top_k : 50
   top_p : 0.95
   temperature : 0.1
-  use_cache : True
-  do_sample : True
 
 
 translate : 
-  source_lang : "en"
-  target_lang : "vi"
-  file_path :
+  source_lang : "English"
+  target_lang : "Vietnamese"
+  file_path : # path to file txt or csv have column text to translate
   text : "Hi, I'm doc translate bot"
 

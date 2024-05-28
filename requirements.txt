@@ -9,3 +9,4 @@ nltk
 evaluate
 sacrebleu
 transformers
+omegaconf
