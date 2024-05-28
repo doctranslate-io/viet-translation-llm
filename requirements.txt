@@ -1,0 +1,13 @@
+peft
+bitsandbytes
+accelerate
+trl
+tensorboard
+gdown
+pandas 
+nltk
+evaluate
+sacrebleu
+transformers
+omegaconf
+loguru
